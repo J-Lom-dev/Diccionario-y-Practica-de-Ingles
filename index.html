@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diccionario y Práctica de Inglés</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <span class="brand-badge">EN → ES</span>
+        <div>
+          <h1>Vocabulario &amp; Práctica</h1>
+          <p class="subtitle">Selección de 1 a 10 palabras · Acumulación diaria · Diccionario completo</p>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" aria-label="Secciones principales">
+        <button type="button" class="nav-btn active" data-view="session">Sesión y Práctica</button>
+        <button type="button" class="nav-btn" data-view="dictionary">
+          Diccionario (<span id="navFullCount">0</span>)
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <section class="stats-grid" aria-label="Resumen de progreso">
+      <article class="stat-card">
+        <span class="stat-label">Acumuladas</span>
+        <strong id="statAccumulated" class="stat-value">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Nuevas hoy</span>
+        <strong id="statNewToday" class="stat-value">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Aciertos</span>
+        <strong id="statCorrect" class="stat-value success-text">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">A reforzar</span>
+        <strong id="statWeak" class="stat-value warning-text">0</strong>
+      </article>
+    </section>
+
+    <section id="viewSession" class="view-section active">
+      <div class="panel control-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Añadir palabras nuevas (1 a 10)</h2>
+            <p class="muted">
+              Se suman al historial acumulado guardado en tu navegador para repasarlas y practicarlas.
+            </p>
+          </div>
+          <button type="button" id="resetProgressBtn" class="btn btn-ghost">Reiniciar progreso</button>
+        </div>
+
+        <div class="selector-row">
+          <div id="countButtons" class="count-buttons" role="group" aria-label="Cantidad de palabras nuevas"></div>
+          <div class="range-group">
+            <label for="countRange">Cantidad: <strong id="selectedCountLabel">5</strong></label>
+            <input id="countRange" type="range" min="1" max="10" value="5" />
+          </div>
+          <button type="button" id="addWordsBtn" class="btn btn-primary">
+            Añadir y comenzar estudio
+          </button>
+        </div>
+
+        <div id="statusBanner" class="status-banner" role="status" aria-live="polite"></div>
+      </div>
+
+      <div id="studyStage" class="panel stage-panel hidden">
+        <div class="stage-header">
+          <div>
+            <span class="stage-tag">Etapa 1 · Estudio / Diccionario</span>
+            <h2>Palabras para estudiar y repasar</h2>
+            <p class="muted">
+              Revisa cada palabra en inglés, su traducción y su nota o ejemplo antes de pasar a escribir.
+            </p>
+          </div>
+          <div class="stage-actions">
+            <button type="button" id="goToPracticeBtn" class="btn btn-primary">Continuar</button>
+          </div>
+        </div>
+
+        <div class="filter-pills" id="studyFilterPills">
+          <button type="button" class="pill active" data-filter="all">Todas (<span id="pillAllCount">0</span>)</button>
+          <button type="button" class="pill" data-filter="new">Nuevas hoy (<span id="pillNewCount">0</span>)</button>
+          <button type="button" class="pill" data-filter="review">Acumuladas (<span id="pillReviewCount">0</span>)</button>
+        </div>
+
+        <div id="studyCardsGrid" class="cards-grid"></div>
+
+        <div class="stage-footer">
+          <button type="button" id="goToPracticeBottomBtn" class="btn btn-primary">Continuar</button>
+        </div>
+      </div>
+
+      <div id="practiceStage" class="panel stage-panel hidden">
+        <div class="stage-header">
+          <div>
+            <span class="stage-tag">Etapa 2 y 3 · Práctica de escritura y validación</span>
+            <h2>Escribe la palabra en inglés</h2>
+          </div>
+          <button type="button" id="backToStudyBtn" class="btn btn-secondary">Volver a estudio</button>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-meta">
+            <span id="practiceProgressText">Palabra 1 de 1</span>
+            <span id="practiceScoreText">Aciertos en ronda: 0</span>
+          </div>
+          <div class="progress-track">
+            <div id="practiceProgressFill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div id="practiceCard" class="practice-card">
+          <div class="prompt-badges">
+            <span id="practiceOriginBadge" class="badge badge-new">Nueva</span>
+            <span id="practiceCategoryBadge" class="badge badge-neutral">Categoría</span>
+          </div>
+
+          <p class="prompt-label">Traducción / pista en español:</p>
+          <h3 id="practiceSpanishPrompt" class="prompt-spanish">—</h3>
+          <p id="practiceHint" class="prompt-hint"></p>
+
+          <form id="answerForm" class="answer-form" autocomplete="off">
+            <label for="englishInput" class="sr-only">Escribe la palabra en inglés</label>
+            <input
+              id="englishInput"
+              type="text"
+              class="text-input"
+              placeholder="Escribe aquí la palabra en inglés..."
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="none"
+            />
+            <button type="submit" id="checkBtn" class="btn btn-primary">Comprobar</button>
+          </form>
+
+          <div id="validationBox" class="validation-box hidden" aria-live="polite">
+            <div id="validationTitle" class="validation-title"></div>
+            <p id="validationDetail" class="validation-detail"></p>
+            <button type="button" id="nextWordBtn" class="btn btn-dark">Siguiente palabra</button>
+          </div>
+        </div>
+
+        <div id="roundSummary" class="round-summary hidden">
+          <h3>¡Ronda completada!</h3>
+          <p id="roundSummaryText" class="muted"></p>
+          <div id="weakWordsList" class="weak-list"></div>
+          <div class="summary-actions">
+            <button type="button" id="practiceAgainBtn" class="btn btn-primary">Practicar ronda de nuevo</button>
+            <button type="button" id="practiceWeakBtn" class="btn btn-secondary hidden">Reforzar palabras falladas</button>
+            <button type="button" id="backStudyFromSummaryBtn" class="btn btn-ghost">Volver a estudio</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewDictionary" class="view-section">
+      <div class="panel">
+        <div class="panel-header dictionary-header">
+          <div>
+            <h2>Diccionario</h2>
+            <p class="muted">
+              Todas las palabras incluidas en la base de datos de esta página, ordenadas de forma progresiva.
+            </p>
+          </div>
+          <div class="dict-controls">
+            <input
+              id="dictSearchInput"
+              type="search"
+              class="search-input"
+              placeholder="Buscar por ID (ej. w42) o en inglés (en)..."
+            />
+            <select id="dictCategorySelect" class="select-input" aria-label="Filtrar por categoría">
+              <option value="all">Todas las categorías</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="dictionaryCountInfo" class="dict-count-info"></div>
+        <div id="dictionaryList" class="dictionary-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
