@@ -40,9 +40,10 @@
         <span class="stat-label">Aciertos</span>
         <strong id="statCorrect" class="stat-value success-text">0</strong>
       </article>
-      <article class="stat-card">
-        <span class="stat-label">A reforzar</span>
+      <article class="stat-card stat-card-clickable" id="statWeakCard" role="button" tabindex="0" title="Ver y practicar palabras a reforzar">
+        <span class="stat-label">A reforzar ⚡</span>
         <strong id="statWeak" class="stat-value warning-text">0</strong>
+        <span class="stat-action-link">Ver y practicar &rarr;</span>
       </article>
     </section>
 
@@ -82,7 +83,15 @@
             </p>
           </div>
           <div class="stage-actions">
-            <button type="button" id="goToPracticeBtn" class="btn btn-primary">Continuar</button>
+            <div class="order-selector" role="radiogroup" aria-label="Orden de práctica">
+              <button type="button" class="order-btn active" data-order="ordered" title="Practicar en orden secuencial">
+                <span class="order-icon">🗂️</span> Ordenada
+              </button>
+              <button type="button" class="order-btn" data-order="random" title="Practicar en orden aleatorio">
+                <span class="order-icon">🔀</span> Aleatorio
+              </button>
+            </div>
+            <button type="button" id="goToPracticeBtn" class="btn btn-primary">Continuar &rarr;</button>
           </div>
         </div>
 
@@ -95,7 +104,15 @@
         <div id="studyCardsGrid" class="cards-grid"></div>
 
         <div class="stage-footer">
-          <button type="button" id="goToPracticeBottomBtn" class="btn btn-primary">Continuar</button>
+          <div class="order-selector" role="radiogroup" aria-label="Orden de práctica">
+            <button type="button" class="order-btn active" data-order="ordered" title="Practicar en orden secuencial">
+              <span class="order-icon">🗂️</span> Ordenada
+            </button>
+            <button type="button" class="order-btn" data-order="random" title="Practicar en orden aleatorio">
+              <span class="order-icon">🔀</span> Aleatorio
+            </button>
+          </div>
+          <button type="button" id="goToPracticeBottomBtn" class="btn btn-primary">Continuar &rarr;</button>
         </div>
       </div>
 
@@ -189,7 +206,30 @@
       </div>
     </section>
   </main>
-    <span class="j-lom"><p>J-LOM</p></span>
+
+  <div id="weakWordsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="weakModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="stage-tag">Refuerzo</span>
+          <h3 id="weakModalTitle">Palabras a reforzar ⚡</h3>
+        </div>
+        <button type="button" id="closeWeakModalBtn" class="modal-close-btn" aria-label="Cerrar ventana">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="weakModalDesc" class="muted"></p>
+        <div id="weakModalList" class="weak-modal-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="startWeakPracticeFromModalBtn" class="btn btn-primary">
+          ⚡ Practicar estas palabras ahora
+        </button>
+        <button type="button" id="closeWeakModalBottomBtn" class="btn btn-ghost">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <span class="j-lom"><p>J-LOM</p></span>
   <script type="module" src="script.js"></script>
 </body>
 </html>

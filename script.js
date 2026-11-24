@@ -15,6 +15,7 @@ function createDefaultState() {
       weakIds: []
     },
     studyFilter: "all",
+    practiceOrder: "ordered",
     practice: {
       queue: [],
       currentIndex: 0,
@@ -36,6 +37,7 @@ function loadState() {
     return {
       ...base,
       ...parsed,
+      practiceOrder: parsed.practiceOrder === "random" ? "random" : "ordered",
       stats: { ...base.stats, ...(parsed.stats || {}) },
       practice: { ...base.practice, ...(parsed.practice || {}) }
     };
@@ -115,7 +117,14 @@ const el = {
   dictSearchInput: document.getElementById("dictSearchInput"),
   dictCategorySelect: document.getElementById("dictCategorySelect"),
   dictionaryCountInfo: document.getElementById("dictionaryCountInfo"),
-  dictionaryList: document.getElementById("dictionaryList")
+  dictionaryList: document.getElementById("dictionaryList"),
+  statWeakCard: document.getElementById("statWeakCard"),
+  weakWordsModal: document.getElementById("weakWordsModal"),
+  closeWeakModalBtn: document.getElementById("closeWeakModalBtn"),
+  closeWeakModalBottomBtn: document.getElementById("closeWeakModalBottomBtn"),
+  weakModalDesc: document.getElementById("weakModalDesc"),
+  weakModalList: document.getElementById("weakModalList"),
+  startWeakPracticeFromModalBtn: document.getElementById("startWeakPracticeFromModalBtn")
 };
 
 function renderCountSelector() {
@@ -260,16 +269,120 @@ function addSelectedWordsAndStudy() {
   renderAll();
 }
 
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function getActiveStudyWords() {
+  const newSet = new Set(state.newTodayIds);
+  const allWords = state.accumulatedIds.map(getWordById).filter(Boolean);
+  if (state.studyFilter === "new") {
+    return allWords.filter((w) => newSet.has(w.id));
+  }
+  if (state.studyFilter === "review") {
+    return allWords.filter((w) => !newSet.has(w.id));
+  }
+  return allWords;
+}
+
+function setPracticeOrder(order) {
+  state.practiceOrder = order === "random" ? "random" : "ordered";
+  saveState();
+  renderOrderSelectors();
+}
+
+function renderOrderSelectors() {
+  const current = state.practiceOrder || "ordered";
+  document.querySelectorAll(".order-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.order === current);
+  });
+}
+
+function openWeakModal() {
+  renderWeakModalContent();
+  el.weakWordsModal.classList.remove("hidden");
+}
+
+function closeWeakModal() {
+  el.weakWordsModal.classList.add("hidden");
+}
+
+function renderWeakModalContent() {
+  const weakWords = state.stats.weakIds.map(getWordById).filter(Boolean);
+  el.weakModalList.innerHTML = "";
+
+  if (weakWords.length === 0) {
+    el.weakModalDesc.textContent =
+      "No tienes palabras marcadas para reforzar en este momento. ¡Excelente progreso!";
+    el.weakModalList.innerHTML = `
+      <div class="empty-state">
+        <span style="font-size: 2.5rem; display: block; margin-bottom: 8px;">🎉</span>
+        <p style="font-weight: 600; color: var(--text); margin: 0 0 4px;">¡Sin palabras pendientes!</p>
+        <p class="muted" style="margin: 0;">Cuando falles alguna palabra durante la práctica, se guardará aquí automáticamente para que puedas repasarla y reforzarla.</p>
+      </div>
+    `;
+    el.startWeakPracticeFromModalBtn.classList.add("hidden");
+  } else {
+    el.weakModalDesc.textContent =
+      `Tienes ${weakWords.length} ${weakWords.length === 1 ? "palabra que requiere" : "palabras que requieren"} refuerzo:`;
+    el.startWeakPracticeFromModalBtn.classList.remove("hidden");
+    el.startWeakPracticeFromModalBtn.textContent = `⚡ Practicar ${weakWords.length} ${weakWords.length === 1 ? "palabra" : "palabras"} ahora`;
+
+    weakWords.forEach((word) => {
+      const card = document.createElement("article");
+      card.className = "weak-modal-card";
+      card.innerHTML = `
+        <div class="weak-modal-top">
+          <span class="weak-modal-en">${word.id} · ${word.en}</span>
+          <span class="weak-modal-cat">${word.category}</span>
+        </div>
+        <div class="weak-modal-es">${word.es}</div>
+        <p class="weak-modal-ex">"${word.example}"</p>
+      `;
+      el.weakModalList.appendChild(card);
+    });
+  }
+}
+
 function startPractice(weakOnly = false) {
   if (state.accumulatedIds.length === 0) return;
 
-  let queueIds = [...state.accumulatedIds];
+  let queueIds = [];
+
   if (weakOnly) {
     const sourceWeak =
       state.practice.roundWeakIds.length > 0 ? state.practice.roundWeakIds : state.stats.weakIds;
     const validWeak = sourceWeak.filter((id) => state.accumulatedIds.includes(id));
-    if (validWeak.length > 0) {
-      queueIds = validWeak;
+    let weakWords = (validWeak.length > 0 ? validWeak : state.stats.weakIds).map(getWordById).filter(Boolean);
+    if (weakWords.length === 0) return;
+
+    if (state.practiceOrder === "random") {
+      queueIds = shuffleArray(weakWords).map((w) => w.id);
+    } else {
+      queueIds = [...weakWords]
+        .sort((a, b) => parseInt(a.id.replace(/\D/g, ""), 10) - parseInt(b.id.replace(/\D/g, ""), 10))
+        .map((w) => w.id);
+    }
+  } else {
+    let activeWords = getActiveStudyWords();
+    if (activeWords.length === 0) {
+      activeWords = state.accumulatedIds.map(getWordById).filter(Boolean);
+    }
+    if (activeWords.length === 0) return;
+
+    if (state.practiceOrder === "random") {
+      // Baraja el conjunto de palabras activo usando Fisher-Yates sin repeticiones
+      queueIds = shuffleArray(activeWords).map((w) => w.id);
+    } else {
+      // Modo secuencial desde el ID menor al mayor
+      queueIds = [...activeWords]
+        .sort((a, b) => parseInt(a.id.replace(/\D/g, ""), 10) - parseInt(b.id.replace(/\D/g, ""), 10))
+        .map((w) => w.id);
     }
   }
 
@@ -306,8 +419,15 @@ function renderPracticeView() {
   if (!word) return;
 
   const isNew = state.newTodayIds.includes(word.id);
+  const isWeak = p.isWeakMode;
+  let contextLabel = isWeak ? " (Refuerzo)" : "";
+  if (!isWeak) {
+    if (state.studyFilter === "new") contextLabel = " (Nuevas)";
+    if (state.studyFilter === "review") contextLabel = " (Repaso)";
+  }
+  const orderIndicator = state.practiceOrder === "random" ? " · 🔀 Aleatorio" : " · 🗂️ Ordenada";
 
-  el.practiceProgressText.textContent = `Palabra ${p.currentIndex + 1} de ${total}${p.isWeakMode ? " (Refuerzo)" : ""}`;
+  el.practiceProgressText.textContent = `Palabra ${p.currentIndex + 1} de ${total}${contextLabel}${orderIndicator}`;
   el.practiceScoreText.textContent = `Aciertos en ronda: ${p.roundCorrect}`;
   el.practiceProgressFill.style.width = `${(p.currentIndex / total) * 100}%`;
 
@@ -524,6 +644,7 @@ function renderAll() {
   renderCountSelector();
   updateAddButtonText();
   renderStatsAndBanner();
+  renderOrderSelectors();
   renderStudyStage();
   renderDictionary();
 }
@@ -531,6 +652,44 @@ function renderAll() {
 el.navButtons.forEach((btn) => {
   btn.addEventListener("click", () => switchView(btn.dataset.view));
 });
+
+document.querySelectorAll(".order-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setPracticeOrder(btn.dataset.order));
+});
+
+if (el.statWeakCard) {
+  el.statWeakCard.addEventListener("click", openWeakModal);
+  el.statWeakCard.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openWeakModal();
+    }
+  });
+}
+
+if (el.closeWeakModalBtn) {
+  el.closeWeakModalBtn.addEventListener("click", closeWeakModal);
+}
+if (el.closeWeakModalBottomBtn) {
+  el.closeWeakModalBottomBtn.addEventListener("click", closeWeakModal);
+}
+if (el.weakWordsModal) {
+  el.weakWordsModal.addEventListener("click", (e) => {
+    if (e.target === el.weakWordsModal) closeWeakModal();
+  });
+}
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && el.weakWordsModal && !el.weakWordsModal.classList.contains("hidden")) {
+    closeWeakModal();
+  }
+});
+
+if (el.startWeakPracticeFromModalBtn) {
+  el.startWeakPracticeFromModalBtn.addEventListener("click", () => {
+    closeWeakModal();
+    startPractice(true);
+  });
+}
 
 el.countRange.addEventListener("input", (e) => setSelectedCount(e.target.value));
 el.addWordsBtn.addEventListener("click", addSelectedWordsAndStudy);
